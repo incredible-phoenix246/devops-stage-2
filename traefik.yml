@@ -1,0 +1,51 @@
+entryPoints:
+  web:
+    address: ":80"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+
+http:
+  routers:
+    frontend:
+      rule: "Host(`http://jumpingcrab.com`)"
+      entryPoints:
+        - web
+      service: frontend
+      middlewares:
+        - redirectScheme
+    backend:
+      rule: "PathPrefix(`/api`)"
+      entryPoints:
+        - web
+      service: backend
+    adminer:
+      rule: "Host(`http://db.jumpingcrab.com`)"
+      entryPoints:
+        - web
+      service: adminer
+    proxy:
+      rule: "Host(`http://proxy.jumpingcrab.com`)"
+      entryPoints:
+        - web
+      service: proxy
+
+  services:
+    frontend:
+      loadBalancer:
+        servers:
+          - url: "http://frontend:3000"
+    backend:
+      loadBalancer:
+        servers:
+          - url: "http://backend:8000"
+    adminer:
+      loadBalancer:
+        servers:
+          - url: "http://adminer:8080"
+    proxy:
+      loadBalancer:
+        servers:
+          - url: "http://proxy:81"
