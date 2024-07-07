@@ -1,62 +1,73 @@
-version: "3.8"
-
 services:
-  traefik:
-    image: traefik:v2.2
-    command:
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--entrypoints.web.address=:80"
-    ports:
-      - "80:80"
-      - "8080:8080"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik.rule=Host(`traefik.localhost`)"
-      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
-
-  backend:
-    build:
-      context: ./backend
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=PathPrefix(`/api`)"
-      - "traefik.http.services.backend.loadbalancer.server.port=8000"
-    depends_on:
-      - db
-
-  frontend:
-    build:
-      context: ./frontend
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontend.rule=Host(`http://jumpingcrab.com/`)"
-      - "traefik.http.services.frontend.loadbalancer.server.port=80"
-
+  # PostgreSQL Database Service
   db:
     image: postgres:13
-    environment:
-      POSTGRES_DB: mydatabase
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+    container_name: database
+    restart: always
+    env_file:
+      - backend/.env
     ports:
-      - "5433:5432"
+      - "5432:5432"   
+    volumes:
+      - postgres_data_3:/var/lib/postgresql/data  
+    networks:
+      - mynet
 
+  # Adminer Service (Database Management Tool)
   adminer:
     image: adminer
+    container_name: adminer
+    restart: always
     ports:
-      - "8081:8080"
+      - "8080:8080"   
+    networks:
+      - mynet
 
-  proxy:
+  # Backend Service
+  backend:
+    build: ./backend
+    container_name: backend
+    command: bash -c "poetry run bash ./prestart.sh && poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
+    depends_on:
+      - db   # Ensure the database service is started before backend
+    env_file:
+      - backend/.env   # Environment variables for the backend
+    networks:
+      - mynet
+
+  # Frontend Service
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    env_file:
+      - frontend/.env   # Environment variables for the frontend
+    networks:
+      - mynet
+
+  # Nginx Proxy Manager Service
+  nginx:
     image: jc21/nginx-proxy-manager:latest
+    container_name: nginx
+    restart: unless-stopped
     ports:
-      - "81:81"
-      # - "80:80"
-      - "443:443"
-    environment:
-      DB_SQLITE_FILE: "/data/database.sqlite"
+      - "80:80"     # Public HTTP Port
+      - "443:443"   # Public HTTPS Port
+      - "8090:81"     # Admin Web Port for Nginx Proxy Manager
     volumes:
       - ./data:/data
-      - ./letsencrypt:/etc/letsencrypt
+      - ./nginx/nginx.conf:/data/nginx/custom/http_top.conf  # Custom Nginx configuration
+      - ./letsencrypt:/etc/letsencrypt  # Let's Encrypt SSL certificates storage
+    depends_on:
+      - frontend   # Ensure frontend service is started before nginx
+      - backend    # Ensure backend service is started before nginx
+      - adminer    # Ensure adminer service is started before nginx
+    networks:
+      - mynet
+
+# Define named volumes for persistent data storage
+volumes:
+  postgres_data_3:
+
+# Define custom network for inter-service communication
+networks:
+  mynet:

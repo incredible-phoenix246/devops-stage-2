@@ -1,40 +1,25 @@
-# # Use the official Node.js image.
-# FROM node:18-alpine
+# Stage 1: Build the React app
+# FROM node:16-alpine AS build
+FROM node:lts AS development
 
-# # Set the working directory
-# WORKDIR /app
-
-# # Copy the dependency files
-# COPY package.json package-lock.json ./
-
-# # Install dependencies
-# RUN npm install
-
-# # Copy the application files
-# COPY . .
-
-# # Build the React application
-# RUN npm run build
-
-# # Install a simple HTTP server to serve the static files
-# RUN npm install -g serve
-
-# # Start the React application
-# CMD ["serve", "-s", "build"]
-
-
-FROM node:alpine
-# Set the working directory
+# Set working directory
 WORKDIR /app
-# Copy the package.json and package-lock.json files
+
+# Copy package.json and package-lock.json
 COPY package*.json ./
-# Install the dependencies
+
+# Install dependencies
 RUN npm install
-# Copy the app files
+
+# Copy the rest of the application
 COPY . .
-# Build the app
+
+# build the application
 RUN npm run build
-# Expose the port
-EXPOSE 3000
-# Run the app
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0" ]
+
+
+EXPOSE 4173
+
+
+# Run the development server on container start
+CMD ["npm", "run", "preview", "--", "--host"]
