@@ -18,4 +18,18 @@ To get started with this template, please follow the instructions in the respect
 - [Frontend README](./frontend/README.md)
 - [Backend README](./backend/README.md)
 
+## Running the Application
 
+### Locally
+
+To run the application locally, execute:
+
+```bash
+    sudo docker-compose up -d
+```
+
+### In Production
+
+```bash
+ docker compose docker-compose-prod.yml up -d
+```
