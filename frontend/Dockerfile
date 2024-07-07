@@ -22,4 +22,4 @@ EXPOSE 4173
 
 
 # Run the development server on container start
-CMD ["npm", "run", "preview", "--", "--host"]
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0"]
